@@ -3,11 +3,23 @@ const http = require('http');
 const { Server } = require('socket.io');
 const crypto = require('crypto');
 const app = express();
+const cors = require('cors');
 const server = http.createServer(app);
-const io = new Server(server);
+
 
 // Stores keys for demonstration purposes (use secure storage in production)
 let keys = {};
+
+app.use(cors({
+    origin: 'http://localhost:3000',
+}));
+
+const io = new Server(server, {
+    cors: {
+        origin: 'http://localhost:3000',
+        methods: ['GET', 'POST'],
+    },
+});
 
 io.on('connection', (socket) => {
     console.log('a user connected');
