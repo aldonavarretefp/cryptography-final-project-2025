@@ -47,11 +47,6 @@ const decryptSymmetric = (cipherText, symmetricKey, iv) => {
     return decrypted;
 };
 
-// Hash a message using SHA-256
-const hashMessage = (message) => {
-    return crypto.createHash('sha256').update(message).digest('hex');
-};
-
 // Create a digital signature using a private key
 const signMessage = (message, privateKey) => {
     const sign = crypto.createSign('SHA256');
@@ -74,7 +69,6 @@ module.exports = {
     deriveSymmetricKeyFromPassword,
     encryptSymmetric,
     decryptSymmetric,
-    hashMessage,
     signMessage,
     verifySignature,
 };

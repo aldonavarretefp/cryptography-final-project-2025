@@ -6,7 +6,7 @@ const app = express();
 const cors = require('cors');
 const server = http.createServer(app);
 
-const { deriveSymmetricKeyFromPassword, decryptSymmetric } = require('./utils/encryption');
+const { deriveSymmetricKeyFromPassword } = require('./utils/encryption');
 
 
 // Stores keys for demonstration purposes (use secure storage in production)
@@ -29,13 +29,10 @@ io.on('connection', (socket) => {
 
     console.log('a user connected');
     console.log('keys:', keys);
-
+    
     socket.on('generateKeys', (user) => {
         const { name, password } = user;
-
-        
         const salt = crypto.randomBytes(16).toString('hex');
-        // Symetric key
         deriveSymmetricKeyFromPassword(password, salt)
             .then((derivedKey) => {
                 keys[user.name] = { derivedKey };
@@ -48,16 +45,16 @@ io.on('connection', (socket) => {
         );
     });
 
-    socket.on('sendMessage', ({ encryptedMessageWithAES, user, iv, originalMessage }) => {
+    socket.on('sendMessage', (data) => {
         try {
-            const { name } = user;
-            console.log('Sending message from:', name);
-            // console.log('Received encrypted message:', encryptedMessageWithAES);
+            const { encryptedData, user, iv, originalMessage, digest, signedMessage } = data;
+            console.log(data);
             socket.broadcast.emit('receiveMessage', {
-                message: encryptedMessageWithAES,
+                message: encryptedData,
                 user,
                 iv,
-                originalMessage
+                signedMessage,
+                digest,
             });
         } catch (err) {
             console.error('Error decrypting message:', err);
@@ -70,6 +67,7 @@ io.on('connection', (socket) => {
     });
 });
 
+
 server.listen(3001, () => {
-  console.log('listening on *:3001');
+    console.log('listening on *:3001');
 });
