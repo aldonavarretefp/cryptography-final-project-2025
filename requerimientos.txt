@@ -1,0 +1,27 @@
+
+- Generar las llaves y cifrar los mensajes - ESO SI NECESITA VER - 20:03
+- Nosotros estamos ocupando arquitectura cliente servidor.
+- Reporte técnico
+  - Servidor, por que
+  - Qué lenguaje
+  - Mostrar funcionamiento
+  - Antecedentes para lo que estamos haciendo.
+  - Función AES (Descripción de AES, por ejemplo).
+  - Cómo se implementa (Muy básico)
+  - Conclusiones no son individuales. Retos, dificultades, etc.
+  -
+- Código fuente
+  - Organizarlo para que lo pueda entender.
+
+
+- Sobre el inicio de sesion
+ - Dos usuarios
+ - Comparten un 'secreto' para cifrar y descifrar mensajes entre ellos.
+ - Semilla para que se genere la llave simetrica. (Tiene que ser el secreto, que va a ser una cadena [password]) 30:00
+ - La llave simétrica con el secreto se renueva cada sesión
+ - Puedes mostrar en prompt 40:00
+ - Servidor intermediario 40:40
+ - El usuario simplemente tiene que escribir su nombre y nosotros dependiendo si tiene llave o no las generamos y las guardamos.
+ - 
+
+ 

@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import Login from './Components/Login';
-import KeyGeneration from './Components/KeyGeneration';
+import KeyGeneration from './Components/KeyGeneration/KeyGeneration';
 import Chat from './Components/Chat';
 
 import './index.css';
 
 function App() {
-  const [derivedKey, setDerivedKey] = useState(null);  // Store the derived key from the password
-  const [publicKey, setPublicKey] = useState(null);    // Store the generated public key
+  const [derivedKey, setDerivedKey] = useState(null);    // Store the generated public key
+  const [userData, setUserData] = useState({});              // Store the user information
 
   // Stage control to determine which view to show
   const [stage, setStage] = useState('login');         // 'login' -> 'keyGeneration' -> 'chat'
@@ -20,22 +20,23 @@ function App() {
 
   // Once the keys are generated, move to chat
   const handleKeysGenerated = (key) => {
-    setPublicKey(key);
+    setDerivedKey(key);
     setStage('chat');
   };
 
   return (
     <div className="App h-screen w-screen">
       {stage === 'login' && (
-        <Login setDerivedKey={handleLogin} />
+        <Login setDerivedKey={handleLogin} setUserData={setUserData}/>
       )}
 
       {stage === 'keyGeneration' && (
-        <KeyGeneration setPublicKey={handleKeysGenerated} />
+        <KeyGeneration setPublicKey={handleKeysGenerated} userData={userData} />
       )}
 
-      {stage === 'chat' && derivedKey && publicKey && (
-        <Chat derivedKey={derivedKey} publicKey={publicKey} />
+      {stage === 'chat' && derivedKey && derivedKey && (
+        <Chat user={userData}
+        derivedKey={derivedKey} publicKey={derivedKey} user={userData}/>
       )}
     </div>
   );

@@ -1,16 +1,22 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { deriveKey } from '../utils';
 
-function Login({ setDerivedKey }) {
+import io from 'socket.io-client';
+
+
+const socket = io('http://localhost:3001');
+
+function Login({ setDerivedKey, setUserData}) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const userName = e.target.name.value;
     const password = e.target.password.value;
-
-    // Derive the key from the password
     const key = deriveKey(password);
+    //console.log('User set:', {name: userName, password, salt: 'salt' })
+    setUserData({ name: userName, password});
     setDerivedKey(key);
+    socket.emit('connection');
   }
 
   return (
@@ -34,7 +40,7 @@ function Login({ setDerivedKey }) {
           >
             <div>
               <label className="block text-sm font-medium leading-6 text-gray-900">
-                Give us your name
+                Publica
               </label>
               <div className="mt-1">
                 <input
@@ -51,7 +57,7 @@ function Login({ setDerivedKey }) {
             <div>
               <div className="flex items-center justify-between">
                 <label htmlFor="password" className="block text-sm font-medium leading-6 text-gray-900">
-                  Password
+                  Privada
                 </label>
               </div>
               <div className="mt-2">
