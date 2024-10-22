@@ -29,7 +29,7 @@ function base64ToBuffer(base64) {
     return bytes.buffer; // Return as an ArrayBuffer
 }
 
-async function importPublicKey(base64PublicKey) {
+export async function importPublicKey(base64PublicKey) {
     const publicKeyBuffer = base64ToBuffer(base64PublicKey); // Properly decode the base64 string
     return window.crypto.subtle.importKey(
         "spki",

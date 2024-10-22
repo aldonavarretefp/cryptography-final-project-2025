@@ -7,7 +7,6 @@ const cors = require('cors');
 const server = http.createServer(app);
 const { deriveSymmetricKeyFromPassword } = require('./utils/encryption');
 
-
 // Stores keys for demonstration purposes (use secure storage in production)
 let keys = {};
 
@@ -22,13 +21,15 @@ const io = new Server(server, {
     },
 });
 
+let client1PublicKey = null;
+let client2PublicKey = null;
+
 io.on('connection', (socket) => {
-    
     // Aqui va el código de la aplicación en cuanto se conecta un cliente
 
     console.log('a user connected');
     console.log('keys:', keys);
-    
+
     socket.on('generateKeys', (user) => {
         const { name, password } = user;
         const salt = crypto.randomBytes(16).toString('hex');
@@ -80,8 +81,43 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', () => {
         console.log('user disconnected');
-        // Clear keys for disconnected
+        client1PublicKey = null;
+        client2PublicKey = null;
     });
+
+    // Escuchar cuando el cliente 1 envía su formulario con la clave pública
+    socket.on('client1FormSubmitted', (data) => {
+        console.log('Client 1 submitted:', data.publicKey);
+        client1PublicKey = data.publicKey;
+        checkAndExchangeKeys(socket);
+    });
+
+    // Escuchar cuando el cliente 2 envía su formulario con la clave pública
+    socket.on('client2FormSubmitted', (data) => {
+        console.log('Client 2 submitted:', data.publicKey);
+        client2PublicKey = data.publicKey;
+        checkAndExchangeKeys(socket);
+    });
+
+    // Función para intercambiar las claves entre ambos clientes
+    const checkAndExchangeKeys = (socket) => {
+        if (client1PublicKey && client2PublicKey) {
+            // Enviar la clave pública del cliente 1 al cliente 2
+            socket.emit('receivePublicKey', { client: 2, publicKey: client1PublicKey });
+            io.emit('sendToClient2', { publicKey: client1PublicKey });
+
+            // Enviar la clave pública del cliente 2 al cliente 1
+            socket.emit('receivePublicKey', { client: 1, publicKey: client2PublicKey });
+            io.emit('sendToClient1', { publicKey: client2PublicKey });
+
+            io.emit('bothUsersConnected', true); 
+
+            // Reiniciar las variables si es necesario para manejar futuras conexiones
+            client1PublicKey = null;
+            client2PublicKey = null;
+        }
+    };
+
 });
 
 

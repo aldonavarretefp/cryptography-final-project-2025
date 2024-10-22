@@ -6,6 +6,9 @@ const { hashMessage } = require('./utils/encryption.js');  // asegúrate de que 
 
 // Prueba de generación de par de claves RSA:
 generateKeyPair().then(keys => {
+    const publicKey = keys.publicKey;
+    const privateKey = keys.privateKey;
+    
     console.log('Par de claves generado:', keys);
 }).catch(err => {
     console.error('Error generando par de claves:', err);

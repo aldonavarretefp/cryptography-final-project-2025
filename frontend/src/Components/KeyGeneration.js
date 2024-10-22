@@ -27,7 +27,7 @@ function KeyGeneration({ setPublicKey: setDerivedKey, userData }) {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-center">
         <div className={`relative bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 text-white text-2xl font-bold p-6 rounded-lg shadow-lg ${keysGenerated ? 'animate-fade-out' : 'animate-pulse'}`}>
-          <h2 className="relative z-10">{keysGenerated ? 'Keys Generated!' : 'Keys are being generated...'}</h2>
+          <h2 className="relative z-10">{keysGenerated ? 'Connected!' : 'Waiting for the other user...'}</h2>
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-10 animate-shimmer"></div>
         </div>
         {keysGenerated && (
