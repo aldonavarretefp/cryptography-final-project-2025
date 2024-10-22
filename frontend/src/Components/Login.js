@@ -55,18 +55,80 @@ const encryptPrivateKey = async (privateKey, password) => {
     privateKeyBytes
   );
 
-  // Convertir el resultado a base64
-  const encryptedPrivateKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(encryptedPrivateKey)));
-  //const ivBase64 = btoa(String.fromCharCode(...iv));
-  //const saltBase64 = btoa(String.fromCharCode(...salt));
+  // Concatenar salt, IV y la clave encriptada en un solo Uint8Array
+  const encryptedData = new Uint8Array([...salt, ...iv, ...new Uint8Array(encryptedPrivateKey)]);
 
-  // Guardar en localStorage el IV, salt, y la clave privada encriptada
-  //localStorage.setItem("privateKey", privateKey);
+  // Convertir a base64 y almacenar
+  const encryptedPrivateKeyBase64 = btoa(String.fromCharCode(...encryptedData));
   sessionStorage.setItem("encryptedPrivateKey", encryptedPrivateKeyBase64);
-
-  console.log('Private Key encrypted and stored in localStorage.');
+  console.log('Private key encrypted and stored.');
 };
 
+const deriveAESKeyForDecryption = async (password, salt) => {
+  const encoder = new TextEncoder();
+  const passwordBytes = encoder.encode(password);
+
+  const keyMaterial = await window.crypto.subtle.importKey(
+    "raw",
+    passwordBytes,
+    { name: "PBKDF2" },
+    false,
+    ["deriveKey"]
+  );
+
+  const aesKey = await window.crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt: salt,
+      iterations: 100000, // Igual número de iteraciones utilizado en el cifrado
+      hash: "SHA-256",
+    },
+    keyMaterial,
+    { name: "AES-GCM", length: 256 },
+    true,
+    ["decrypt"] // Ahora es necesario que la clave pueda desencriptar
+  );
+
+  return aesKey;
+};
+
+const decryptPrivateKeyWithPassword = async (password) => {
+  try {
+    // Recuperar los datos encriptados
+    const encryptedPrivateKeyBase64 = sessionStorage.getItem('encryptedPrivateKey');
+    const encryptedData = Uint8Array.from(atob(encryptedPrivateKeyBase64), c => c.charCodeAt(0));
+
+    // Separar salt (primeros 16 bytes), IV (siguientes 12 bytes) y clave privada encriptada (el resto)
+    const salt = encryptedData.slice(0, 16);
+    const iv = encryptedData.slice(16, 28);
+    const encryptedPrivateKey = encryptedData.slice(28);
+
+    // Derivar la clave AES usando la contraseña y el salt extraído
+    const aesKey = await deriveAESKeyForDecryption(password, salt);
+
+    // Desencriptar la clave privada
+    const decryptedPrivateKeyBytes = await window.crypto.subtle.decrypt(
+      {
+        name: "AES-GCM",
+        iv: iv,
+      },
+      aesKey,
+      encryptedPrivateKey
+    );
+
+    // Convertir los bytes a string
+    const decoder = new TextDecoder();
+    const decryptedPrivateKey = decoder.decode(decryptedPrivateKeyBytes);
+
+    console.log('Private key decrypted:', decryptedPrivateKey);
+    return decryptedPrivateKey;
+  } catch (error) {
+    console.error('Error al desencriptar la clave privada:', error);
+    return null;
+  }
+};
+
+//FUNCION
 function Login({ setStage, setUserData, userData }) {
   const [userName, setUserName] = useState('');
   const [secret, setSecret] = useState('');
@@ -74,7 +136,7 @@ function Login({ setStage, setUserData, userData }) {
   const [privateKeyPassword, setPrivateKeyPassword] = useState('');
   const [publicKey, setPublicKey] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     // Configurar los datos del usuario
     setUserData({
@@ -98,6 +160,8 @@ function Login({ setStage, setUserData, userData }) {
     // Cambiar el estado a 'waitingRoom'
     setStage('waitingRoom');
 
+    const decryptedPrivateKey = await decryptPrivateKeyWithPassword(privateKeyPassword);
+    console.log('Desencriptado:', decryptedPrivateKey);
   };
 
   const downloadKeys = () => {
@@ -106,21 +170,21 @@ function Login({ setStage, setUserData, userData }) {
       alert("No se encontraron las claves para descargar.");
       return;
     }
-  
+
     // Crear el contenido del archivo
     const content = `Public Key:\n${publicKey}\n\nEncrypted Private Key:\n${encryptedPrivateKey}`;
-  
+
     // Crear un blob con el contenido y un enlace para la descarga
     const blob = new Blob([content], { type: "text/plain" });
     const url = window.URL.createObjectURL(blob);
-  
+
     // Crear un enlace de descarga
     const a = document.createElement("a");
     a.href = url;
     a.download = "keys.txt";  // Nombre del archivo a descargar
     document.body.appendChild(a);
     a.click();
-  
+
     // Eliminar el enlace una vez descargado
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
@@ -158,7 +222,7 @@ function Login({ setStage, setUserData, userData }) {
       // Asignar la clave pública al campo correspondiente
       setPublicKey(publicKeyBase64);
       sessionStorage.setItem("publicKey", publicKeyBase64);
-      //sessionStorage.setItem("privateKey", privateKeyBase64);
+      sessionStorage.setItem("privateKey", privateKeyBase64);
 
       // Encriptar la clave privada con la contraseña y guardarla en localStorage
       await encryptPrivateKey(privateKeyBase64, privateKeyPassword);
