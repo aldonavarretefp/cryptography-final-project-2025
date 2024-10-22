@@ -10,10 +10,10 @@ const deriveAESKey = async (password) => {
 
   // Deriva una clave usando PBKDF2
   const keyMaterial = await window.crypto.subtle.importKey(
-    "raw", 
-    passwordBytes, 
-    { name: "PBKDF2" }, 
-    false, 
+    "raw",
+    passwordBytes,
+    { name: "PBKDF2" },
+    false,
     ["deriveKey"]
   );
 
@@ -28,7 +28,7 @@ const deriveAESKey = async (password) => {
     },
     keyMaterial,
     { name: "AES-GCM", length: 256 }, // Clave AES de 256 bits
-    true, 
+    true,
     ["encrypt", "decrypt"]
   );
 
@@ -93,9 +93,37 @@ function Login({ setStage, setUserData, userData }) {
       socket.emit('client2FormSubmitted', { publicKey });
     }
 
+    sessionStorage.setItem("publicKey", publicKey);
+    sessionStorage.setItem("encryptedPrivateKey", encryptedPrivateKey);
     // Cambiar el estado a 'waitingRoom'
     setStage('waitingRoom');
 
+  };
+
+  const downloadKeys = () => {
+    // Validar si existen las claves
+    if (!publicKey || !encryptedPrivateKey) {
+      alert("No se encontraron las claves para descargar.");
+      return;
+    }
+  
+    // Crear el contenido del archivo
+    const content = `Public Key:\n${publicKey}\n\nEncrypted Private Key:\n${encryptedPrivateKey}`;
+  
+    // Crear un blob con el contenido y un enlace para la descarga
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = window.URL.createObjectURL(blob);
+  
+    // Crear un enlace de descarga
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "keys.txt";  // Nombre del archivo a descargar
+    document.body.appendChild(a);
+    a.click();
+  
+    // Eliminar el enlace una vez descargado
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
   };
 
   const generateAsymmetricKeys = async () => {
@@ -105,7 +133,7 @@ function Login({ setStage, setUserData, userData }) {
       alert('Por favor, llena el campo de Private Key Password antes de generar las llaves.');
       return;
     }
-  
+
     try {
       // Generar el par de claves RSA
       const keyPair = await window.crypto.subtle.generateKey(
@@ -118,20 +146,20 @@ function Login({ setStage, setUserData, userData }) {
         true,
         ["encrypt", "decrypt"]
       );
-  
+
       // Exportar las claves públicas y privadas
       const publicKey = await window.crypto.subtle.exportKey("spki", keyPair.publicKey);
       const privateKey = await window.crypto.subtle.exportKey("pkcs8", keyPair.privateKey);
-  
+
       // Convertir las claves a base64
       const publicKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(publicKey)));
       const privateKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(privateKey)));
-  
+
       // Asignar la clave pública al campo correspondiente
       setPublicKey(publicKeyBase64);
       sessionStorage.setItem("publicKey", publicKeyBase64);
       //sessionStorage.setItem("privateKey", privateKeyBase64);
-  
+
       // Encriptar la clave privada con la contraseña y guardarla en localStorage
       await encryptPrivateKey(privateKeyBase64, privateKeyPassword);
       loadEncryptedPrivateKey();
@@ -145,7 +173,7 @@ function Login({ setStage, setUserData, userData }) {
   const loadEncryptedPrivateKey = () => {
     // Recuperar la clave privada encriptada desde localStorage
     const encryptedPrivateKeyFromStorage = sessionStorage.getItem('encryptedPrivateKey');
-  
+
     if (encryptedPrivateKeyFromStorage) {
       // Mostrar la clave privada encriptada en el TextField correspondiente
       setEncryptedPrivateKey(encryptedPrivateKeyFromStorage); // Asignar al estado de 'privateKey'
@@ -275,6 +303,17 @@ function Login({ setStage, setUserData, userData }) {
                 className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
               >
                 Don't you have keys? Generate Keys
+              </button>
+            </div>
+
+            {/* Botón para descargar el archivo .txt */}
+            <div>
+              <button
+                type="button"
+                onClick={downloadKeys}
+                className="flex w-full justify-center rounded-md bg-green-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600"
+              >
+                Download Keys as TXT
               </button>
             </div>
 
