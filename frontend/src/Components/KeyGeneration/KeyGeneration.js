@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import io from 'socket.io-client';
 import './KeyGeneration.css';
+import { generateKeyPair } from '../../utils';
 
 const socket = io('http://localhost:3001');
 
@@ -9,16 +10,17 @@ function KeyGeneration({ setPublicKey: setDerivedKey, userData }) {
   const [derivedKey, setLocalDerivedKey] = useState('');
 
   useEffect(() => {
-    console.log('Generating keys for:', userData);
-
-    socket.emit('generateKeys', userData);
-
-    socket.on('keysGenerated', (data) => {
-      setLocalDerivedKey(data.derivedKey);
-      setKeysGenerated(true);
-      setDerivedKey(data.derivedKey);
-    });
-
+    try {
+        const generateKeys = async () => {
+            const keys = await generateKeyPair();
+            setDerivedKey(keys.publicKey);
+            setLocalDerivedKey(keys.privateKey);
+            setKeysGenerated(true);
+        }
+        generateKeys();
+    } catch (error) {
+      console.error('Error generating keys:', error);
+    }
   }, [setDerivedKey, userData]);
 
   return (

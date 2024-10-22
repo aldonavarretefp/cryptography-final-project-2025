@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CryptoJS and WebCrypto Tests</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+</head>
+<body>
+    <h1>CryptoJS and WebCrypto Test</h1>
+
+    <button onclick="testAllFunctions()">Run All Tests</button>
+
+    <pre id="output"></pre>
+
+    <script>
+        // ====================== CRYPTOJS FUNCTIONS ====================== //
+
+        // Generate a symmetric key using PBKDF2
+        const generateSymmetricKey = (password, salt) => {
+            const iterations = 100000;
+            const key = CryptoJS.PBKDF2(password, salt, {
+                keySize: 256 / 32,  // 256 bits
+                iterations: iterations,
+                hasher: CryptoJS.algo.SHA256
+            });
+            return key.toString(CryptoJS.enc.Hex);
+        };
+
+        // Symmetric encryption using AES-256
+        const encryptSymmetric = (message, symmetricKey) => {
+            const iv = CryptoJS.lib.WordArray.random(16);  // Initialization vector
+            const encrypted = CryptoJS.AES.encrypt(message, CryptoJS.enc.Hex.parse(symmetricKey), {
+                iv: iv,
+                mode: CryptoJS.mode.CBC,
+                padding: CryptoJS.pad.Pkcs7
+            });
+            return { iv: iv.toString(CryptoJS.enc.Hex), encryptedData: encrypted.toString() };
+        };
+
+        // Symmetric decryption using AES-256
+        const decryptSymmetric = (cipherText, symmetricKey, iv) => {
+            const decrypted = CryptoJS.AES.decrypt(cipherText, CryptoJS.enc.Hex.parse(symmetricKey), {
+                iv: CryptoJS.enc.Hex.parse(iv),
+                mode: CryptoJS.mode.CBC,
+                padding: CryptoJS.pad.Pkcs7
+            });
+            return decrypted.toString(CryptoJS.enc.Utf8);
+        };
+
+        // Hash a message using SHA-256
+        const hashMessage = (message) => {
+            return CryptoJS.SHA256(message).toString(CryptoJS.enc.Hex);
+        };
+
+        // ====================== WEBCRYPTO FUNCTIONS ====================== //
+
+        // Generate an RSA key pair using WebCrypto
+        async function generateKeyPair() {
+            const keyPair = await window.crypto.subtle.generateKey({
+                name: "RSA-PSS",
+                modulusLength: 2048,
+                publicExponent: new Uint8Array([1, 0, 1]),
+                hash: "SHA-256"
+            },
+            true, ["sign", "verify"]);
+            return keyPair;
+        }
+
+        // Sign a message using RSA private key
+        async function signMessage(message, privateKey) {
+            const encodedMessage = new TextEncoder().encode(message);
+            const signature = await window.crypto.subtle.sign({
+                name: "RSA-PSS",
+                saltLength: 32,
+            }, privateKey, encodedMessage);
+            return bufferToHex(signature);
+        }
+
+        // Verify a signature using RSA public key
+        async function verifySignature(message, signature, publicKey) {
+            const encodedMessage = new TextEncoder().encode(message);
+            const signatureBuffer = hexToBuffer(signature);
+            const isValid = await window.crypto.subtle.verify({
+                name: "RSA-PSS",
+                saltLength: 32,
+            }, publicKey, signatureBuffer, encodedMessage);
+            return isValid;
+        }
+
+        // ====================== HELPER FUNCTIONS ====================== //
+
+        // Convert ArrayBuffer to Hex
+        function bufferToHex(buffer) {
+            return Array.prototype.map.call(new Uint8Array(buffer), x => ('00' + x.toString(16)).slice(-2)).join('');
+        }
+
+        // Convert Hex to ArrayBuffer
+        function hexToBuffer(hex) {
+            const bytes = new Uint8Array(hex.length / 2);
+            for (let i = 0; i < hex.length; i += 2) {
+                bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
+            }
+            return bytes.buffer;
+        }
+
+        // ====================== TESTING ALL FUNCTIONS ====================== //
+
+        async function testAllFunctions() {
+            let output = "";
+
+            // Symmetric Key Generation (PBKDF2)
+            const password = "myPassword123";
+            const salt = CryptoJS.lib.WordArray.random(16).toString();
+            const symmetricKey = generateSymmetricKey(password, salt);
+            output += `Generated Symmetric Key (PBKDF2): ${symmetricKey}\n`;
+
+            // Symmetric Encryption/Decryption (AES-256)
+            const message = "This is a secret message";
+            const { iv, encryptedData } = encryptSymmetric(message, symmetricKey);
+            const decryptedMessage = decryptSymmetric(encryptedData, symmetricKey, iv);
+            output += `Original Message: ${message}\n`;
+            output += `Encrypted Data: ${encryptedData}\n`;
+            output += `Decrypted Message: ${decryptedMessage}\n`;
+
+            // Hashing a Message (SHA-256)
+            const hashedMessage = hashMessage(message);
+            output += `Hashed Message (SHA-256): ${hashedMessage}\n`;
+
+            // Asymmetric Key Pair Generation (RSA)
+            const { publicKey, privateKey } = await generateKeyPair();
+            output += `Generated RSA Key Pair\n`;
+
+            // Digital Signature
+            const signature = await signMessage(message, privateKey);
+            output += `Digital Signature: ${signature}\n`;
+
+            // Verify Signature
+            const isValid = await verifySignature(message, signature, publicKey);
+            output += `Signature Valid: ${isValid}\n`;
+
+            // Display output
+            document.getElementById("output").innerText = output;
+        }
+    </script>
+</body>
+</html>

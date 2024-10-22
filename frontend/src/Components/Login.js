@@ -3,7 +3,6 @@ import { deriveKey } from '../utils';
 
 import io from 'socket.io-client';
 
-
 const socket = io('http://localhost:3001');
 
 function Login({ setDerivedKey, setUserData}) {
@@ -13,7 +12,6 @@ function Login({ setDerivedKey, setUserData}) {
     const userName = e.target.name.value;
     const password = e.target.password.value;
     const key = deriveKey(password);
-    //console.log('User set:', {name: userName, password, salt: 'salt' })
     setUserData({ name: userName, password});
     setDerivedKey(key);
     socket.emit('connection');

@@ -35,8 +35,7 @@ function App() {
       )}
 
       {stage === 'chat' && derivedKey && derivedKey && (
-        <Chat user={userData}
-        derivedKey={derivedKey} publicKey={derivedKey} user={userData}/>
+        <Chat user={userData} derivedKey={derivedKey} publicKey={derivedKey}/>
       )}
     </div>
   );
