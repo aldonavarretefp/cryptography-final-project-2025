@@ -9,7 +9,6 @@ import {
   decryptSymmetric,
   signMessage,
   verifySignature,
-  importPublicKey,
 } from "../utils";
 
 const socket = io("http://localhost:3001");
@@ -93,9 +92,9 @@ const Messages = ({ user }) => {
 
       // Firmar el mensaje
       const signature = await signMessage(message, keyPair.privateKey);
-      
+
       // Verificar el mensaje
-      const isVerified = await verifySignature( decryptedData, signature, keyPair.publicKey);
+      const isVerified = await verifySignature(decryptedData, signature, keyPair.publicKey);
 
       console.log("send", {
         encryptedData,
@@ -143,9 +142,9 @@ const Messages = ({ user }) => {
       );
       console.log(data);
 
-      const publicKey = await importPublicKey(publicSenderKey);
+      const publicKey = ""
 
-    console.log("Imported Public Key:", publicKey);
+      console.log("Imported Public Key:", publicKey);
 
       // Verificar la firma del mensaje
       const isVerified = verifySignature(decryptedMessage, signedMessage, publicKey);
@@ -204,9 +203,8 @@ const Messages = ({ user }) => {
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`flex ${
-              msg.user === user.name ? "justify-end" : "justify-start"
-            }`}
+            className={`flex ${msg.user === user.name ? "justify-end" : "justify-start"
+              }`}
           >
             {msg.avatar && (
               <img
@@ -216,11 +214,10 @@ const Messages = ({ user }) => {
               />
             )}
             <div
-              className={`p-3 ${
-                msg.position === "right"
+              className={`p-3 ${msg.position === "right"
                   ? "bg-purple-500 dark:bg-gray-800 rounded-xl rounded-br-none my-1 mx-3"
                   : "bg-purple-300 dark:bg-gray-800 mx-3 my-1 rounded-2xl rounded-bl-none sm:w-3/4 md:w-3/6"
-              }`}
+                }`}
             >
               {msg.user && (
                 <div className="text-xs text-gray-600 dark:text-gray-200">
@@ -228,9 +225,8 @@ const Messages = ({ user }) => {
                 </div>
               )}
               <div
-                className={`text-gray-700 dark:text-gray-200 ${
-                  msg.position === "right" ? "" : "hidden sm:block"
-                }`}
+                className={`text-gray-700 dark:text-gray-200 ${msg.position === "right" ? "" : "hidden sm:block"
+                  }`}
               >
                 {msg.message}
               </div>

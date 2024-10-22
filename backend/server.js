@@ -5,7 +5,6 @@ const crypto = require('crypto');
 const app = express();
 const cors = require('cors');
 const server = http.createServer(app);
-const { deriveSymmetricKeyFromPassword } = require('./utils/encryption');
 
 // Stores keys for demonstration purposes (use secure storage in production)
 let keys = {};

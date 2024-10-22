@@ -1,135 +1,11 @@
 import React, { useEffect, useState } from 'react';
+import { encryptPrivateKey, decryptPrivateKeyWithPassword } from './../utils/criptoUtils';
 import io from 'socket.io-client';
 
 const socket = io('http://localhost:3001');
 
-const deriveAESKey = async (password) => {
-  // Convierte la contraseña en un array de bytes
-  const encoder = new TextEncoder();
-  const passwordBytes = encoder.encode(password);
-
-  // Deriva una clave usando PBKDF2
-  const keyMaterial = await window.crypto.subtle.importKey(
-    "raw",
-    passwordBytes,
-    { name: "PBKDF2" },
-    false,
-    ["deriveKey"]
-  );
-
-  // Generar una clave AES-GCM a partir de la contraseña con salt
-  const salt = window.crypto.getRandomValues(new Uint8Array(16));
-  const aesKey = await window.crypto.subtle.deriveKey(
-    {
-      name: "PBKDF2",
-      salt: salt,
-      iterations: 100000, // Número de iteraciones para hacer más robusta la clave
-      hash: "SHA-256",
-    },
-    keyMaterial,
-    { name: "AES-GCM", length: 256 }, // Clave AES de 256 bits
-    true,
-    ["encrypt", "decrypt"]
-  );
-
-  return { aesKey, salt };
-};
-
-const encryptPrivateKey = async (privateKey, password) => {
-  const { aesKey, salt } = await deriveAESKey(password);
-
-  // Codificar la clave privada a bytes
-  const encoder = new TextEncoder();
-  const privateKeyBytes = encoder.encode(privateKey);
-
-  // Crear un vector de inicialización (IV) aleatorio
-  const iv = window.crypto.getRandomValues(new Uint8Array(12));
-
-  // Encriptar la clave privada usando AES-GCM
-  const encryptedPrivateKey = await window.crypto.subtle.encrypt(
-    {
-      name: "AES-GCM",
-      iv: iv, // IV es requerido por AES-GCM
-    },
-    aesKey,
-    privateKeyBytes
-  );
-
-  // Concatenar salt, IV y la clave encriptada en un solo Uint8Array
-  const encryptedData = new Uint8Array([...salt, ...iv, ...new Uint8Array(encryptedPrivateKey)]);
-
-  // Convertir a base64 y almacenar
-  const encryptedPrivateKeyBase64 = btoa(String.fromCharCode(...encryptedData));
-  sessionStorage.setItem("encryptedPrivateKey", encryptedPrivateKeyBase64);
-  console.log('Private key encrypted and stored.');
-};
-
-const deriveAESKeyForDecryption = async (password, salt) => {
-  const encoder = new TextEncoder();
-  const passwordBytes = encoder.encode(password);
-
-  const keyMaterial = await window.crypto.subtle.importKey(
-    "raw",
-    passwordBytes,
-    { name: "PBKDF2" },
-    false,
-    ["deriveKey"]
-  );
-
-  const aesKey = await window.crypto.subtle.deriveKey(
-    {
-      name: "PBKDF2",
-      salt: salt,
-      iterations: 100000, // Igual número de iteraciones utilizado en el cifrado
-      hash: "SHA-256",
-    },
-    keyMaterial,
-    { name: "AES-GCM", length: 256 },
-    true,
-    ["decrypt"] // Ahora es necesario que la clave pueda desencriptar
-  );
-
-  return aesKey;
-};
-
-const decryptPrivateKeyWithPassword = async (password) => {
-  try {
-    // Recuperar los datos encriptados
-    const encryptedPrivateKeyBase64 = sessionStorage.getItem('encryptedPrivateKey');
-    const encryptedData = Uint8Array.from(atob(encryptedPrivateKeyBase64), c => c.charCodeAt(0));
-
-    // Separar salt (primeros 16 bytes), IV (siguientes 12 bytes) y clave privada encriptada (el resto)
-    const salt = encryptedData.slice(0, 16);
-    const iv = encryptedData.slice(16, 28);
-    const encryptedPrivateKey = encryptedData.slice(28);
-
-    // Derivar la clave AES usando la contraseña y el salt extraído
-    const aesKey = await deriveAESKeyForDecryption(password, salt);
-
-    // Desencriptar la clave privada
-    const decryptedPrivateKeyBytes = await window.crypto.subtle.decrypt(
-      {
-        name: "AES-GCM",
-        iv: iv,
-      },
-      aesKey,
-      encryptedPrivateKey
-    );
-
-    // Convertir los bytes a string
-    const decoder = new TextDecoder();
-    const decryptedPrivateKey = decoder.decode(decryptedPrivateKeyBytes);
-
-    console.log('Private key decrypted:', decryptedPrivateKey);
-    return decryptedPrivateKey;
-  } catch (error) {
-    console.error('Error al desencriptar la clave privada:', error);
-    return null;
-  }
-};
-
 //FUNCION
-function Login({ setStage, setUserData, userData }) {
+const Login = ({ setStage, setUserData, userData }) => {
   const [userName, setUserName] = useState('');
   const [secret, setSecret] = useState('');
   const [encryptedPrivateKey, setEncryptedPrivateKey] = useState('');
@@ -138,30 +14,49 @@ function Login({ setStage, setUserData, userData }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // Configurar los datos del usuario
-    setUserData({
-      userName,
-      secret,
-      encryptedPrivateKey,
-      privateKeyPassword,
-      publicKey
-    });
+    setUserData({ userName, secret, encryptedPrivateKey, privateKeyPassword, publicKey });
 
-    if (userData.userClientNumber === 1) {
-      // Cliente 1 envía el formulario
-      socket.emit('client1FormSubmitted', { publicKey });
-    } else {
-      // Cliente 2 envía el formulario
-      socket.emit('client2FormSubmitted', { publicKey });
-    }
-
+    socket.emit(userData.userClientNumber === 1 ? 'client1FormSubmitted' : 'client2FormSubmitted', { publicKey });
     sessionStorage.setItem("publicKey", publicKey);
     sessionStorage.setItem("encryptedPrivateKey", encryptedPrivateKey);
-    // Cambiar el estado a 'waitingRoom'
     setStage('waitingRoom');
 
     const decryptedPrivateKey = await decryptPrivateKeyWithPassword(privateKeyPassword);
     console.log('Desencriptado:', decryptedPrivateKey);
+  };
+
+  const generateAsymmetricKeys = async () => {
+    if (!privateKeyPassword) {
+      alert('Por favor, llena el campo de Private Key Password antes de generar las llaves.');
+      return;
+    }
+
+    try {
+      const keyPair = await window.crypto.subtle.generateKey(
+        {
+          name: "RSA-OAEP",
+          modulusLength: 2048,
+          publicExponent: new Uint8Array([1, 0, 1]),
+          hash: { name: "SHA-256" },
+        },
+        true,
+        ["encrypt", "decrypt"]
+      );
+
+      const publicKey = await window.crypto.subtle.exportKey("spki", keyPair.publicKey);
+      const privateKey = await window.crypto.subtle.exportKey("pkcs8", keyPair.privateKey);
+      const publicKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(publicKey)));
+      const privateKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(privateKey)));
+
+      setPublicKey(publicKeyBase64);
+      sessionStorage.setItem("publicKey", publicKeyBase64);
+      sessionStorage.setItem("privateKey", privateKeyBase64);
+      await encryptPrivateKey(privateKeyBase64, privateKeyPassword);
+      loadEncryptedPrivateKey();
+      console.log('Llaves generadas y clave privada encriptada.');
+    } catch (error) {
+      console.error('Error al generar las llaves:', error);
+    }
   };
 
   const downloadKeys = () => {
@@ -188,50 +83,6 @@ function Login({ setStage, setUserData, userData }) {
     // Eliminar el enlace una vez descargado
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
-  };
-
-  const generateAsymmetricKeys = async () => {
-    // Validar si el campo Private Key Password está vacío
-    if (!privateKeyPassword) {
-      console.log('Error: El campo Private Key Password está vacío.');
-      alert('Por favor, llena el campo de Private Key Password antes de generar las llaves.');
-      return;
-    }
-
-    try {
-      // Generar el par de claves RSA
-      const keyPair = await window.crypto.subtle.generateKey(
-        {
-          name: "RSA-OAEP",
-          modulusLength: 2048,
-          publicExponent: new Uint8Array([1, 0, 1]),
-          hash: { name: "SHA-256" },
-        },
-        true,
-        ["encrypt", "decrypt"]
-      );
-
-      // Exportar las claves públicas y privadas
-      const publicKey = await window.crypto.subtle.exportKey("spki", keyPair.publicKey);
-      const privateKey = await window.crypto.subtle.exportKey("pkcs8", keyPair.privateKey);
-
-      // Convertir las claves a base64
-      const publicKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(publicKey)));
-      const privateKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(privateKey)));
-
-      // Asignar la clave pública al campo correspondiente
-      setPublicKey(publicKeyBase64);
-      sessionStorage.setItem("publicKey", publicKeyBase64);
-      sessionStorage.setItem("privateKey", privateKeyBase64);
-
-      // Encriptar la clave privada con la contraseña y guardarla en localStorage
-      await encryptPrivateKey(privateKeyBase64, privateKeyPassword);
-      loadEncryptedPrivateKey();
-
-      console.log('Llaves generadas y clave privada encriptada.');
-    } catch (error) {
-      console.error('Error al generar las llaves:', error);
-    }
   };
 
   const loadEncryptedPrivateKey = () => {
