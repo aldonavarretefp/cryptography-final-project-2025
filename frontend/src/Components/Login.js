@@ -22,7 +22,7 @@ const Login = ({ setStage, setUserData, userData }) => {
     setStage('waitingRoom');
 
     const decryptedPrivateKey = await decryptPrivateKeyWithPassword(privateKeyPassword);
-    console.log('Desencriptado:', decryptedPrivateKey);
+    console.log('Desencriptado tipo:', typeof decryptedPrivateKey);
   };
 
   const generateAsymmetricKeys = async () => {

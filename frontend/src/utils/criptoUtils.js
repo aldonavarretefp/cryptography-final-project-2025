@@ -142,8 +142,9 @@ export const decryptPrivateKeyWithPassword = async (password) => {
       aesKey,
       encryptedPrivateKey
     );
-    const decoder = new TextDecoder();
-    return decoder.decode(decryptedPrivateKeyBytes);
+    //const decoder = new TextDecoder();
+    // return decoder.decode(decryptedPrivateKeyBytes);
+    return decryptedPrivateKeyBytes;
   } catch (error) {
     console.error('Error al desencriptar la clave privada:', error);
     return null;
