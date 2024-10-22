@@ -5,7 +5,6 @@ const crypto = require('crypto');
 const app = express();
 const cors = require('cors');
 const server = http.createServer(app);
-
 const { deriveSymmetricKeyFromPassword } = require('./utils/encryption');
 
 
@@ -33,28 +32,46 @@ io.on('connection', (socket) => {
     socket.on('generateKeys', (user) => {
         const { name, password } = user;
         const salt = crypto.randomBytes(16).toString('hex');
-        deriveSymmetricKeyFromPassword(password, salt)
-            .then((derivedKey) => {
-                keys[user.name] = { derivedKey };
-                console.log('Keys generated:',{ derivedKey: derivedKey.substring(1, 5) + '...' });
-                socket.emit('keysGenerated', { derivedKey });
-            })
-            .catch((err) => {
-                console.error('Error deriving symmetric key:', err);
-            }
-        );
+
+        const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 2048,
+            publicKeyEncoding: {
+                type: 'spki',
+                format: 'pem',
+            },
+            privateKeyEncoding: {
+                type: 'pkcs8',
+                format: 'pem',
+            },
+        });
     });
 
     socket.on('sendMessage', (data) => {
         try {
-            const { encryptedData, user, iv, originalMessage, digest, signedMessage } = data;
-            console.log(data);
-            socket.broadcast.emit('receiveMessage', {
-                message: encryptedData,
+            const { 
+                encryptedData, 
+                user, 
+                iv,
+                signedMessage, 
+                simmetricKey,
+                publicSenderKey,
+                keyPair
+            } = data;
+            console.log('receive', {
+                encryptedData,
                 user,
                 iv,
                 signedMessage,
-                digest,
+                simmetricKey: simmetricKey.substring(1, 20) + '...',
+            });
+            socket.broadcast.emit('receiveMessage', {
+                encryptedData,
+                user,
+                iv,
+                signedMessage,
+                simmetricKey,
+                publicSenderKey,
+                keyPair,
             });
         } catch (err) {
             console.error('Error decrypting message:', err);

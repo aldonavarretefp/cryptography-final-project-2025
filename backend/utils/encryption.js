@@ -23,7 +23,7 @@ const generateKeyPair = () => {
 };
 
 // Generate a symmetric key using password-based key derivation (PBKDF2)
-const deriveSymmetricKeyFromPassword = async (password, salt) => {
+const generateSymmetricKey = async (password, salt) => {
     const keyLength = 32;  // 256 bits
     const iterations = 100000;
     const derivedKey = await promisify(crypto.pbkdf2)(password, salt, iterations, keyLength, 'sha256');
@@ -47,6 +47,11 @@ const decryptSymmetric = (cipherText, symmetricKey, iv) => {
     return decrypted;
 };
 
+// Hash a message using SHA-256
+const hashMessage = (message) => {
+    return crypto.createHash('sha256').update(message).digest('hex');
+};
+
 // Create a digital signature using a private key
 const signMessage = (message, privateKey) => {
     const sign = crypto.createSign('SHA256');
@@ -66,9 +71,10 @@ const verifySignature = (message, signature, publicKey) => {
 
 module.exports = {
     generateKeyPair,
-    deriveSymmetricKeyFromPassword,
+    generateSymmetricKey,
     encryptSymmetric,
     decryptSymmetric,
+    hashMessage,
     signMessage,
     verifySignature,
 };
