@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { encryptPrivateKey, decryptPrivateKeyWithPassword } from './../utils/criptoUtils';
+import React, { useState } from 'react';
+import { encryptPrivateKey } from './../utils/criptoUtils';
 import io from 'socket.io-client';
 
 const socket = io('http://localhost:3001');
@@ -14,15 +14,21 @@ const Login = ({ setStage, setUserData, userData }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setUserData({ userName, secret, encryptedPrivateKey, privateKeyPassword, publicKey });
+    const clientNumber = userData.userClientNumber
 
-    socket.emit(userData.userClientNumber === 1 ? 'client1FormSubmitted' : 'client2FormSubmitted', { publicKey });
+    if(clientNumber === 1 ) {
+      setUserData({ userName, secret, encryptedPrivateKey, privateKeyPassword, publicKey, clientNumber });
+      socket.emit('client1FormSubmitted' , { publicKey : publicKey });
+    } else {
+      setUserData({ userName, encryptedPrivateKey, privateKeyPassword, publicKey, clientNumber });
+      socket.emit('client2FormSubmitted' , { publicKey : publicKey });
+    }
+
     sessionStorage.setItem("publicKey", publicKey);
-    sessionStorage.setItem("encryptedPrivateKey", encryptedPrivateKey);
     setStage('waitingRoom');
 
-    const decryptedPrivateKey = await decryptPrivateKeyWithPassword(privateKeyPassword);
-    console.log('Desencriptado tipo:', typeof decryptedPrivateKey);
+    //const decryptedPrivateKey = await decryptPrivateKeyWithPassword(privateKeyPassword);
+    //console.log('Desencriptado llave privada:', decryptedPrivateKey);
   };
 
   const generateAsymmetricKeys = async () => {
@@ -50,7 +56,7 @@ const Login = ({ setStage, setUserData, userData }) => {
 
       setPublicKey(publicKeyBase64);
       sessionStorage.setItem("publicKey", publicKeyBase64);
-      sessionStorage.setItem("privateKey", privateKeyBase64);
+      //sessionStorage.setItem("privateKey", privateKeyBase64);
       await encryptPrivateKey(privateKeyBase64, privateKeyPassword);
       loadEncryptedPrivateKey();
       console.log('Llaves generadas y clave privada encriptada.');
@@ -135,7 +141,7 @@ const Login = ({ setStage, setUserData, userData }) => {
             </div>
 
             {/* Secreto */}
-            {
+            {              
               userData.userClientNumber === 1 && (
                 <div>
                   <label className="block text-sm font-medium leading-6 text-gray-900">

@@ -1,20 +1,11 @@
 import React, { useState } from "react";
 import io from "socket.io-client";
 import Alert from "./Alert";
-
-import {
-  generateKeyPair,
-  generateSymmetricKey,
-  encryptSymmetric,
-  decryptSymmetric,
-  signMessage,
-  verifySignature,
-} from "../utils";
+import { decryptPrivateKeyWithPassword, encryptMessage, signMessage, verifySignature, decryptMessage } from "./../utils/criptoUtils";
 
 const socket = io("http://localhost:3001");
 
-const DEFAULT_AVATAR_URL =
-  "https://cdn.pixabay.com/photo/2017/01/31/21/23/avatar-2027366_960_720.png";
+const DEFAULT_AVATAR_URL = "https://cdn.pixabay.com/photo/2017/01/31/21/23/avatar-2027366_960_720.png";
 
 const messagesData = [
   {
@@ -27,9 +18,7 @@ const messagesData = [
   },
 ];
 
-
-
-const Messages = ({ user }) => {
+const Messages = ({ setUserData, userData }) => {
   const [message, setMessage] = useState("");
 
   const [messages, setMessages] = useState(messagesData);
@@ -60,63 +49,27 @@ const Messages = ({ user }) => {
   const sendMessage = async () => {
     try {
       // Obtener mis llaves
-      const keyPair = await generateKeyPair();
-
-      // Exportar las claves públicas y privadas a formato crudo (raw)
-      const pubKey = await window.crypto.subtle.exportKey(
-        "spki",
-        keyPair.publicKey
-      );
-      const privKey = await window.crypto.subtle.exportKey(
-        "pkcs8",
-        keyPair.privateKey
-      );
-
-      // Convertir las claves a base64
-      const publicKey = btoa(String.fromCharCode(...new Uint8Array(pubKey)));
-      const privateKey = btoa(String.fromCharCode(...new Uint8Array(privKey)));
-
+      const encriptedPrivateKey = sessionStorage.getItem('encryptedPrivateKey');
+      const privateKey = await decryptPrivateKeyWithPassword(encriptedPrivateKey, userData.privateKeyPassword);
+    
       // Encriptar el mensaje
-      const simmetricKey = await generateSymmetricKey("password", "salt");
-
-      const { encryptedData, iv } = await encryptSymmetric(
-        message,
-        simmetricKey
-      );
-
-      const decryptedData = await decryptSymmetric(
-        encryptedData,
-        simmetricKey,
-        iv
-      );
+      const encryptedData = await encryptMessage(message, userData.symmetricKey);
 
       // Firmar el mensaje
-      const signature = await signMessage(message, keyPair.privateKey);
+      const signature = await signMessage(message, privateKey);
 
       // Verificar el mensaje
-      const isVerified = await verifySignature(decryptedData, signature, keyPair.publicKey);
+      //const isVerified = await verifySignature(decryptedData, signature, keyPair.publicKey);
 
       console.log("send", {
         encryptedData,
-        iv,
-        // signature,
-        privateKey: privateKey.substring(1, 20) + "...",
-        publicKey: publicKey.substring(1, 20) + "...",
-        simmetricKey,
-        decryptedData,
-        keyPair,
-        isVerified,
+        signature
       });
 
       socket.emit("sendMessage", {
         encryptedData,
-        user,
-        iv,
-        originalMessage: message,
-        signedMessage: signature,
-        publicSenderKey: pubKey,
-        simmetricKey,
-        keyPair,
+        signature,
+        sender: userData.name
       });
     } catch (err) {
       console.error("Error encrypting message:", err);
@@ -127,45 +80,30 @@ const Messages = ({ user }) => {
     try {
       const {
         encryptedData,
-        user: sender,
-        iv,
-        signedMessage,
-        simmetricKey,
-        publicSenderKey,
-        keyPair,
+        signature,
+        sender
       } = data;
-      // Descencriptar el mensaje con la pública del emisor
-      const decryptedMessage = decryptSymmetric(
-        encryptedData,
-        simmetricKey,
-        iv
-      );
+
+      // Descencriptar mensaje
+      const decryptedMessage = await decryptMessage(encryptedData, userData.symmetricKey);
       console.log(data);
 
-      const publicKey = ""
-
-      console.log("Imported Public Key:", publicKey);
-
       // Verificar la firma del mensaje
-      const isVerified = verifySignature(decryptedMessage, signedMessage, publicKey);
+      const othersPublicKey = sessionStorage.getItem('othersPublicKey');
+      const isVerified = await verifySignature(decryptedMessage, signature, othersPublicKey);
 
       console.log("receive", {
-        encryptedData,
-        simmetricKey,
         decryptedMessage,
-        sender,
-        iv,
-        signedMessage,
-        isVerified,
+        isVerified
       });
 
       setAlertMessageFunc(isVerified);
 
       const newMessage = {
         id: messages.length + 1,
-        user: user.name,
+        user: userData.name,
         message: decryptedMessage,
-        position: sender.name === user.name ? "right" : "left",
+        position: sender.name === userData.name ? "right" : "left",
         time: Date.now().toString(),
         avatar: DEFAULT_AVATAR_URL,
       };
@@ -178,6 +116,7 @@ const Messages = ({ user }) => {
 
   return (
     <div className="flex-grow h-full flex flex-col">
+
       <div className="w-full h-15 p-1 bg-purple-600 dark:bg-gray-400 shadow-md rounded-xl rounded-bl-none rounded-br-none">
         {alertMessage.alertTitle && <Alert alert={alertMessage} />}
         <div className="flex p-2 align-middle items-center">
@@ -188,10 +127,24 @@ const Messages = ({ user }) => {
               alt="avatar"
             />
           </div>
+
           <div className="flex-grow p-2">
-            <div className="text-md text-gray-50 font-semibold">
-              Chat Grupal por el socket (Canal de conexión bidireccional)
-            </div>
+              {
+                userData.clientNumber === 1 && (
+                  <div className="text-md text-gray-50 font-semibold">
+                    User 2
+                  </div>  
+                )
+              }
+
+              {
+                userData.clientNumber === 2 && (
+                  <div className="text-md text-gray-50 font-semibold">
+                    User 1
+                  </div>  
+                )
+              }
+              
             <div className="flex items-center">
               <div className="w-2 h-2 bg-green-300 rounded-full"></div>
               <div className="text-xs text-gray-50 ml-1">Online</div>
@@ -199,11 +152,12 @@ const Messages = ({ user }) => {
           </div>
         </div>
       </div>
+
       <div className="w-full flex-grow bg-gray-100 dark:bg-gray-100 p-2 overflow-y-auto my-3">
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`flex ${msg.user === user.name ? "justify-end" : "justify-start"
+            className={`flex ${msg.user === userData.name ? "justify-end" : "justify-start"
               }`}
           >
             {msg.avatar && (
@@ -230,13 +184,11 @@ const Messages = ({ user }) => {
               >
                 {msg.message}
               </div>
-              <div className="text-xs text-gray-400">
-                {new Date(msg.time).toLocaleString()}
-              </div>
             </div>
           </div>
         ))}
       </div>
+
       <div className="h-15 p-3 rounded-xl rounded-tr-none rounded-tl-none bg-gray-100 dark:bg-gray-800">
         <div className="flex items-center">
           <div className="search-chat flex flex-grow p-2">

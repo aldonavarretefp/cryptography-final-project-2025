@@ -22,6 +22,8 @@ const io = new Server(server, {
 
 let client1PublicKey = null;
 let client2PublicKey = null;
+let encryptedSecret = null;
+let salt = null;
 
 io.on('connection', (socket) => {
     // Aqui va el código de la aplicación en cuanto se conecta un cliente
@@ -29,50 +31,19 @@ io.on('connection', (socket) => {
     console.log('a user connected');
     console.log('keys:', keys);
 
-    socket.on('generateKeys', (user) => {
-        const { name, password } = user;
-        const salt = crypto.randomBytes(16).toString('hex');
-
-        const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
-            modulusLength: 2048,
-            publicKeyEncoding: {
-                type: 'spki',
-                format: 'pem',
-            },
-            privateKeyEncoding: {
-                type: 'pkcs8',
-                format: 'pem',
-            },
-        });
-    });
-
     socket.on('sendMessage', (data) => {
         try {
             const { 
                 encryptedData, 
-                user, 
-                iv,
-                signedMessage, 
-                simmetricKey,
-                publicSenderKey,
-                keyPair
+                signature,
+                sender
             } = data;
-            console.log('receive', {
-                encryptedData,
-                user,
-                iv,
-                signedMessage,
-                simmetricKey: simmetricKey.substring(1, 20) + '...',
-            });
-            socket.broadcast.emit('receiveMessage', {
-                encryptedData,
-                user,
-                iv,
-                signedMessage,
-                simmetricKey,
-                publicSenderKey,
-                keyPair,
-            });
+
+            console.log('Encrypted Data:', encryptedData);
+            console.log('Signature:', signature);
+            console.log('Sender:', sender);
+
+            socket.broadcast.emit('receiveMessage', data);
         } catch (err) {
             console.error('Error decrypting message:', err);
         }
@@ -87,38 +58,47 @@ io.on('connection', (socket) => {
     // Escuchar cuando el cliente 1 envía su formulario con la clave pública
     socket.on('client1FormSubmitted', (data) => {
         console.log('Client 1 submitted:', data.publicKey);
-        client1PublicKey = data.publicKey;
-        checkAndExchangeKeys(socket);
+        client1PublicKey = data.publicKey
+        checkAndExchangeKeys();
     });
 
     // Escuchar cuando el cliente 2 envía su formulario con la clave pública
     socket.on('client2FormSubmitted', (data) => {
         console.log('Client 2 submitted:', data.publicKey);
         client2PublicKey = data.publicKey;
-        checkAndExchangeKeys(socket);
+        checkAndExchangeKeys();
+    });
+
+    // Escuchar cuando el cliente 1 envía el secreto encriptado
+    socket.on('sendEncryptedSecret', (data) => {        
+        console.log('Encrypted Secret: ', data.encryptedSecret);
+        salt = data.salt;
+        encryptedSecret = data.encryptedSecret;
+        checkAndExchangeKeys();
     });
 
     // Función para intercambiar las claves entre ambos clientes
-    const checkAndExchangeKeys = (socket) => {
+    const checkAndExchangeKeys = () => {
         if (client1PublicKey && client2PublicKey) {
             // Enviar la clave pública del cliente 1 al cliente 2
-            socket.emit('receivePublicKey', { client: 2, publicKey: client1PublicKey });
             io.emit('sendToClient2', { publicKey: client1PublicKey });
 
             // Enviar la clave pública del cliente 2 al cliente 1
-            socket.emit('receivePublicKey', { client: 1, publicKey: client2PublicKey });
             io.emit('sendToClient1', { publicKey: client2PublicKey });
+
+            // Enviar el secreto encriptado al cliente 2
+            io.emit('receiveEncryptedSecret', { encryptedSecret , salt });
 
             io.emit('bothUsersConnected', true); 
 
             // Reiniciar las variables si es necesario para manejar futuras conexiones
             client1PublicKey = null;
             client2PublicKey = null;
+            encryptedSecret = null;
         }
     };
 
 });
-
 
 server.listen(3001, () => {
     console.log('listening on *:3001');

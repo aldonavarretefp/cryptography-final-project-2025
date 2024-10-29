@@ -21,11 +21,11 @@ function App() {
       )}
 
       {stage === 'waitingRoom' && (      
-        <WaitingRoom setStage={setStage} userData={userData}/>
+        <WaitingRoom setStage={setStage} userData={userData} setUserData={setUserData}/>
       )}
 
       {stage === 'chat' && (
-        <Chat user={userData}/>
+        <Chat setUserData={setUserData} userData={userData}/>
       )}
     </div>
   );
