@@ -16,6 +16,14 @@ const messagesData = [
     time: "1 day ago",
     position: "left",
   },
+  {
+    id: 2,
+    user: "Rey Jhon A. Baquirin",
+    avatar: DEFAULT_AVATAR_URL,
+    message: "(Mensaje de prueba) Hola, ¿cómo estás?",
+    time: "1 day ago",
+    position: "right",
+  }
 ];
 
 const Messages = ({ setUserData, userData }) => {
@@ -64,15 +72,10 @@ const Messages = ({ setUserData, userData }) => {
       // Verificar el mensaje
       //const isVerified = await verifySignature(decryptedData, signature, keyPair.publicKey);
 
-      console.log("send", {
-        encryptedData,
-        signature
-      });
-
       socket.emit("sendMessage", {
         encryptedData,
         signature,
-        sender: userData.name
+        sender: userData.userName
       });
 
 
@@ -84,7 +87,9 @@ const Messages = ({ setUserData, userData }) => {
         time: Date.now().toString(),
         avatar: DEFAULT_AVATAR_URL,
       };
+
       setMessages([...messages, newMessage]);
+      setMessage("");
     } catch (err) {
       console.error("Error encrypting message:", err);
     }
@@ -98,9 +103,10 @@ const Messages = ({ setUserData, userData }) => {
         sender
       } = data;
 
+      console.log("receiveMessage", { encryptedData, signature, sender });
+
       // Descencriptar mensaje
       const decryptedMessage = await decryptMessage(encryptedData, userData.symmetricKey);
-      console.log(data);
 
       // Verificar la firma del mensaje
       const othersPublicKeyPem = sessionStorage.getItem('othersPublicKey');
@@ -132,109 +138,75 @@ const Messages = ({ setUserData, userData }) => {
 
   return (
     <div className="flex-grow h-full flex flex-col">
-
-      <div className="w-full h-15 p-1 bg-purple-600 dark:bg-gray-400 shadow-md rounded-xl rounded-bl-none rounded-br-none">
+      {/* Header */}
+      <div className="w-full h-15 p-1 bg-purple-600 dark:bg-gray-700 shadow-md rounded-t-xl">
         {alertMessage.alertTitle && <Alert alert={alertMessage} />}
-        <div className="flex p-2 align-middle items-center">
-          <div className="border rounded-full border-white p-1/2">
+        <div className="flex items-center p-2">
+          <div className="border border-white rounded-full p-1/2">
             <img
               className="w-14 h-14 rounded-full"
               src="https://cdn.pixabay.com/photo/2017/01/31/21/23/avatar-2027366_960_720.png"
               alt="avatar"
             />
           </div>
-
-          <div className="flex-grow p-2">
-              {
-                userData.clientNumber === 1 && (
-                  <div className="text-md text-gray-50 font-semibold">
-                    User 2
-                  </div>  
-                )
-              }
-
-              {
-                userData.clientNumber === 2 && (
-                  <div className="text-md text-gray-50 font-semibold">
-                    User 1
-                  </div>  
-                )
-              }
-              
-            <div className="flex items-center">
+          <div className="flex-grow pl-3">
+            <div className="text-md text-gray-50 font-semibold">
+              {userData.clientNumber === 1 ? 'User 2' : 'User 1'}
+            </div>
+            <div className="flex items-center mt-1">
               <div className="w-2 h-2 bg-green-300 rounded-full"></div>
-              <div className="text-xs text-gray-50 ml-1">Online</div>
+              <span className="ml-1 text-xs text-gray-50">Online</span>
             </div>
           </div>
         </div>
       </div>
-
-      <div className="w-full flex-grow bg-gray-100 dark:bg-gray-100 p-2 overflow-y-auto my-3">
+  
+      {/* Chat Messages */}
+      <div className="flex-grow w-full bg-gray-100 dark:bg-gray-800 p-4 overflow-y-auto">
         {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`flex ${msg.user === userData.name ? "justify-end" : "justify-start"
-              }`}
-          >
-            {msg.avatar && (
-              <img
-                className="w-8 h-8 m-3 rounded-full"
-                src={msg.avatar}
-                alt="avatar"
-              />
-            )}
+          <div key={msg.id} className={`flex ${msg.position === "left" ? "justify-start" : "justify-end"}`}>            
             <div
-              className={`p-3 ${msg.position === "right"
-                  ? "bg-purple-500 dark:bg-gray-800 rounded-xl rounded-br-none my-1 mx-3"
-                  : "bg-purple-300 dark:bg-gray-800 mx-3 my-1 rounded-2xl rounded-bl-none sm:w-3/4 md:w-3/6"
-                }`}
-            >
-              {msg.user && (
-                <div className="text-xs text-gray-600 dark:text-gray-200">
-                  {msg.user}
-                </div>
-              )}
-              <div
-                className={`text-gray-700 dark:text-gray-200 ${msg.position === "right" ? "" : "hidden sm:block"
-                  }`}
-              >
+              
+              className={`p-3 ${msg.position === "left"
+                ? "bg-purple-300 text-gray-800 rounded-xl rounded-bl-none mr-2"
+                : "bg-purple-500 text-gray-50 rounded-xl rounded-br-none ml-2"
+              } max-w-xs sm:max-w-md lg:max-w-lg`}>
+              
+              <div className="text-xs font-semibold text-gray-600 dark:text-gray-300">
+                {msg.user}
+              </div>
+              <div className="mt-1 text-sm">
                 {msg.message}
               </div>
-            </div>
+            </div>            
           </div>
         ))}
       </div>
-
-      <div className="h-15 p-3 rounded-xl rounded-tr-none rounded-tl-none bg-gray-100 dark:bg-gray-800">
+  
+      {/* Message Input */}
+      <div className="h-16 p-3 bg-gray-100 dark:bg-gray-700 rounded-b-xl">
         <div className="flex items-center">
-          <div className="search-chat flex flex-grow p-2">
-            <input
-              className="input text-gray-700 dark:text-gray-200 text-sm p-5 focus:outline-none bg-gray-100 dark:bg-gray-800 flex-grow rounded-l-md"
-              type="text"
-              placeholder="Type your message ..."
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-            />
-            <button
-              className="bg-gray-100 dark:bg-gray-800 dark:text-gray-200 flex justify-center items-center pr-3 text-gray-400 rounded-r-md ml-5"
-              onClick={sendMessage}
+          <input
+            className="flex-grow px-4 py-2 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 rounded-l-md focus:outline-none"
+            type="text"
+            placeholder="Type your message..."
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+          />
+          <button
+            className="px-4 py-2 bg-purple-600 text-white rounded-r-md focus:outline-none hover:bg-purple-500"
+            onClick={sendMessage}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="white"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                />
-              </svg>
-            </button>
-          </div>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+          </button>
         </div>
       </div>
     </div>
