@@ -24,6 +24,48 @@ export const privateKeyToPEM = async (privateKeyBuffer) => {
   return `-----BEGIN PRIVATE KEY-----\n${formattedKey}\n-----END PRIVATE KEY-----`;
 }
 
+// Función para importar la clave pública en formato PEM para su uso con Web Crypto
+export const importPublicKey = async (pem) => {
+  const binaryDerString = atob(pem);
+  const binaryDer = new Uint8Array(binaryDerString.length);
+  for (let i = 0; i < binaryDerString.length; i++) {
+    binaryDer[i] = binaryDerString.charCodeAt(i);
+  }
+
+  return await crypto.subtle.importKey(
+    "spki",
+    binaryDer.buffer,
+    {
+      name: "RSA-OAEP",
+      hash: "SHA-256"
+    },
+    true,
+    ["encrypt"]
+  );
+}
+
+// Función para importar una clave privada en formato PEM y convertirla a CryptoKey
+export const importPrivateKey = async (pem) => { 
+  // Convierte de base64 a un ArrayBuffer
+  const binaryDerString = window.atob(pem);
+  const binaryDer = new Uint8Array(binaryDerString.length);
+  for (let i = 0; i < binaryDerString.length; i++) {
+    binaryDer[i] = binaryDerString.charCodeAt(i);
+  }
+
+  // Importa la clave como una CryptoKey
+  return await crypto.subtle.importKey(
+    "pkcs8",
+    binaryDer.buffer,
+    {
+      name: "RSA-OAEP",
+      hash: "SHA-256",
+    },
+    true,
+    ["decrypt"]
+  );
+};
+
 // Exportando las claves en formato PEM
 //const publicKeyPEM = publicKeyToPEM(publicKey);
 //const privateKeyPEM = privateKeyToPEM(privateKey);
@@ -94,9 +136,10 @@ export const decryptPrivateKeyWithPassword = async (encriptedPrivateKey, passwor
       aesKey,
       encryptedPrivateKey
     );
-    //const decoder = new TextDecoder();
-    // return decoder.decode(decryptedPrivateKeyBytes);
-    return decryptedPrivateKeyBytes;
+    
+    const decoder = new TextDecoder();
+    return decoder.decode(decryptedPrivateKeyBytes);
+    //return decryptedPrivateKeyBytes;
   } catch (error) {
     console.error('Error al desencriptar la clave privada:', error);
     return null;
@@ -141,24 +184,31 @@ export const encryptSecretForUser2 = async (secret, publicKey) => {
 
   return await crypto.subtle.encrypt(
     {
-      name: "RSA-OAEP"
+      name: "RSA-OAEP",
+      hash: "SHA-256"
     },
     publicKey,
     secretBytes
   );
 };
 
-// Función para descifrar el secreto compartido con la clave privada del usuario 2
+// Función para desencriptar el secreto con la clave privada
 export const decryptSecretWithPrivateKey = async (encryptedSecret, privateKey) => {
-  return await crypto.subtle.decrypt(
-    {
-      name: "RSA-OAEP"
-    },
-    privateKey,
-    encryptedSecret
-  );
+  try {
+    const decrypted = await crypto.subtle.decrypt(
+      {
+        name: "RSA-OAEP",
+        hash: "SHA-256"
+      },
+      privateKey,
+      encryptedSecret
+    );
+    return decrypted;
+  } catch (error) {
+    console.error("Error during decryption:", error);
+    throw error;
+  }
 };
-
 
 //------------------------------------------------------------------------------------
 // Funciones que para enncriptar y desencriptar mensajes

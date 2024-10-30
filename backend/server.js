@@ -22,8 +22,6 @@ const io = new Server(server, {
 
 let client1PublicKey = null;
 let client2PublicKey = null;
-let encryptedSecret = null;
-let salt = null;
 
 io.on('connection', (socket) => {
     // Aqui va el código de la aplicación en cuanto se conecta un cliente
@@ -72,9 +70,9 @@ io.on('connection', (socket) => {
     // Escuchar cuando el cliente 1 envía el secreto encriptado
     socket.on('sendEncryptedSecret', (data) => {        
         console.log('Encrypted Secret: ', data.encryptedSecret);
-        salt = data.salt;
-        encryptedSecret = data.encryptedSecret;
-        checkAndExchangeKeys();
+        const salt = data.salt;
+        const encryptedSecret = data.encryptedSecret;
+        socket.broadcast.emit('receiveEncryptedSecret', { encryptedSecret , salt });
     });
 
     // Función para intercambiar las claves entre ambos clientes
@@ -87,14 +85,11 @@ io.on('connection', (socket) => {
             io.emit('sendToClient1', { publicKey: client2PublicKey });
 
             // Enviar el secreto encriptado al cliente 2
-            io.emit('receiveEncryptedSecret', { encryptedSecret , salt });
-
             io.emit('bothUsersConnected', true); 
 
             // Reiniciar las variables si es necesario para manejar futuras conexiones
             client1PublicKey = null;
             client2PublicKey = null;
-            encryptedSecret = null;
         }
     };
 

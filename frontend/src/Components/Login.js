@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { encryptPrivateKey } from './../utils/criptoUtils';
+import { encryptPrivateKey, decryptPrivateKeyWithPassword } from './../utils/criptoUtils';
 import io from 'socket.io-client';
 
 const socket = io('http://localhost:3001');
 
-//FUNCION
 const Login = ({ setStage, setUserData, userData }) => {
   const [userName, setUserName] = useState('');
   const [secret, setSecret] = useState('');
@@ -27,8 +26,8 @@ const Login = ({ setStage, setUserData, userData }) => {
     sessionStorage.setItem("publicKey", publicKey);
     setStage('waitingRoom');
 
-    //const decryptedPrivateKey = await decryptPrivateKeyWithPassword(privateKeyPassword);
-    //console.log('Desencriptado llave privada:', decryptedPrivateKey);
+    const decryptedPrivateKey = await decryptPrivateKeyWithPassword(encryptedPrivateKey,privateKeyPassword);
+    console.log('Desencriptado llave privada:', decryptedPrivateKey);
   };
 
   const generateAsymmetricKeys = async () => {
