@@ -7,6 +7,7 @@ import {
     decryptPrivateKeyWithPassword,
     importPublicKey,
     importPrivateKey,
+    arrayBufferToBase64,
 } from "./../utils/criptoUtils";
 
 const socket = io("http://localhost:3001");
@@ -29,6 +30,7 @@ function WaitingRoom({ setStage, userData, setUserData }) {
 
                 // Encriptar y enviar el secreto con la salt
                 const secret = userData.secret;
+                console.log("Secret:", secret);
                 const salt = crypto.getRandomValues(new Uint8Array(16));
 
                 const user2PublicKeyPem = data.publicKey;
@@ -74,11 +76,11 @@ function WaitingRoom({ setStage, userData, setUserData }) {
                     console.log("privateKey: ", privateKey);
 
                     const secret = await decryptSecretWithPrivateKey(encryptedSecret, privateKey);
-                    console.log("Decrypted Secret:", secret);
+                    console.log("Decrypted Secret:", new TextDecoder().decode(secret));
 
                     //Generar y guardar llave simétrica
                     const salt = data.salt;
-                    const symmetricKey = await generateSymmetricKey(secret, salt);
+                    const symmetricKey = await generateSymmetricKey(new TextDecoder().decode(secret), salt);
                     setUserData((prevData) => ({...prevData, symmetricKey,}));
 
                 } catch (error) {

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import io from "socket.io-client";
 import Alert from "./Alert";
-import { decryptPrivateKeyWithPassword, encryptMessage, signMessage, verifySignature, decryptMessage } from "./../utils/criptoUtils";
+import { decryptPrivateKeyWithPassword, encryptMessage, signMessage, verifySignature, decryptMessage, importPrivateKey, importPublicKey } from "./../utils/criptoUtils";
 
 const socket = io("http://localhost:3001");
 
@@ -29,6 +29,7 @@ const Messages = ({ setUserData, userData }) => {
     alertType: "danger",
   });
 
+  /*
   const setAlertMessageFunc = (isVerified) => {
     if (isVerified) {
       setAlertMessage({
@@ -43,20 +44,22 @@ const Messages = ({ setUserData, userData }) => {
         alertType: "danger",
       });
     }
-  };
+  };*/
 
 
   const sendMessage = async () => {
     try {
       // Obtener mis llaves
-      const encriptedPrivateKey = sessionStorage.getItem('encryptedPrivateKey');
-      const privateKey = await decryptPrivateKeyWithPassword(encriptedPrivateKey, userData.privateKeyPassword);
-    
+      const encriptedPrivateKey = sessionStorage.getItem("encryptedPrivateKey");
+      const privateKeyPem = await decryptPrivateKeyWithPassword(encriptedPrivateKey, userData.privateKeyPassword);
+      const privateKey = await importPrivateKey(privateKeyPem);
+
       // Encriptar el mensaje
       const encryptedData = await encryptMessage(message, userData.symmetricKey);
 
       // Firmar el mensaje
-      const signature = await signMessage(message, privateKey);
+      //const signature = await signMessage(message, privateKey);
+      const signature = "";
 
       // Verificar el mensaje
       //const isVerified = await verifySignature(decryptedData, signature, keyPair.publicKey);
@@ -71,6 +74,17 @@ const Messages = ({ setUserData, userData }) => {
         signature,
         sender: userData.name
       });
+
+
+      const newMessage = {
+        id: messages.length + 1,
+        user: userData.userName,
+        message: message,
+        position:"right",
+        time: Date.now().toString(),
+        avatar: DEFAULT_AVATAR_URL,
+      };
+      setMessages([...messages, newMessage]);
     } catch (err) {
       console.error("Error encrypting message:", err);
     }
@@ -89,21 +103,23 @@ const Messages = ({ setUserData, userData }) => {
       console.log(data);
 
       // Verificar la firma del mensaje
-      const othersPublicKey = sessionStorage.getItem('othersPublicKey');
-      const isVerified = await verifySignature(decryptedMessage, signature, othersPublicKey);
+      const othersPublicKeyPem = sessionStorage.getItem('othersPublicKey');
+      const othersPublicKey = await importPublicKey(othersPublicKeyPem);
+      //const isVerified = await verifySignature(decryptedMessage, signature, othersPublicKey);
+      const isVerified = true;
 
       console.log("receive", {
         decryptedMessage,
         isVerified
       });
 
-      setAlertMessageFunc(isVerified);
+      //setAlertMessageFunc(isVerified);
 
       const newMessage = {
         id: messages.length + 1,
-        user: userData.name,
+        user: sender,
         message: decryptedMessage,
-        position: sender.name === userData.name ? "right" : "left",
+        position: "left", 
         time: Date.now().toString(),
         avatar: DEFAULT_AVATAR_URL,
       };

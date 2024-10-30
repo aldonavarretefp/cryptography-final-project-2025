@@ -257,34 +257,30 @@ export const decryptMessage = async (encryptedData, symmetricKey) => {
 // Funciones que para firmar mensajes
 
 // Firma un mensaje
-export const signMessage = async (message, privateKey) => {
-  const encodedMessage = new TextEncoder().encode(message);
-  const signature = await window.crypto.subtle.sign({
-    name: "RSA-PSS",
-    saltLength: 32,
-  }, privateKey, encodedMessage);
-  return bufferToHex(signature);  // Función para convertir ArrayBuffer a hex
+export const signMessage = async (privateKey, message) => {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(message);
+  return await crypto.subtle.sign(
+      {
+          name: "RSA-PSS",
+          saltLength: 32,
+      },
+      privateKey,
+      data
+  );
 }
 
 // Verifica la firma de un mensaje
-export const verifySignature = async (message, signature, publicKey) => {
-  const encodedMessage = new TextEncoder().encode(message);
-  const signatureBuffer = hexToBuffer(signature);  // Función para convertir hex a ArrayBuffer
-  const isValid = await window.crypto.subtle.verify({
-    name: "RSA-PSS",
-    saltLength: 32,
-  }, publicKey, signatureBuffer, encodedMessage);
-  return isValid;
-}
-
-export const bufferToHex = async (buffer) => {
-  return Array.prototype.map.call(new Uint8Array(buffer), x => ('00' + x.toString(16)).slice(-2)).join('');
-}
-
-export const hexToBuffer = async (hex) => {
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < hex.length; i += 2) {
-    bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
-  }
-  return bytes.buffer;
+export const verifySignature = async (publicKey, message, signature) => {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(message);
+  return await crypto.subtle.verify(
+      {
+          name: "RSA-PSS",
+          saltLength: 32,
+      },
+      publicKey,
+      signature,
+      data
+  );
 }
