@@ -29,7 +29,7 @@ io.on('connection', (socket) => {
     console.log('a user connected');
     console.log('keys:', keys);
 
-    socket.on('sendMessage', (data) => {
+    socket.on('sendMessage', async (data) => {
         try {
             const { 
                 encryptedData, 

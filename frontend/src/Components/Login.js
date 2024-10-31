@@ -26,8 +26,8 @@ const Login = ({ setStage, setUserData, userData }) => {
     sessionStorage.setItem("publicKey", publicKey);
     setStage('waitingRoom');
 
-    const decryptedPrivateKey = await decryptPrivateKeyWithPassword(encryptedPrivateKey,privateKeyPassword);
-    console.log('Desencriptado llave privada:', decryptedPrivateKey);
+    //const decryptedPrivateKey = await decryptPrivateKeyWithPassword(encryptedPrivateKey,privateKeyPassword);
+    //console.log('Desencriptado llave privada:', decryptedPrivateKey);
   };
 
   const generateAsymmetricKeys = async () => {

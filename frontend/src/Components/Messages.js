@@ -69,9 +69,7 @@ const Messages = ({ setUserData, userData }) => {
       //const signature = await signMessage(message, privateKey);
       const signature = "";
 
-      // Verificar el mensaje
-      //const isVerified = await verifySignature(decryptedData, signature, keyPair.publicKey);
-
+  
       socket.emit("sendMessage", {
         encryptedData,
         signature,
