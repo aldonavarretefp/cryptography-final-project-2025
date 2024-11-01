@@ -26,6 +26,20 @@ const messagesData = [
   }
 ];
 
+/**
+ * Messages component handles the sending and receiving of encrypted messages.
+ * 
+ * @component
+ * @param {Object} props - Component props
+ * @param {Function} props.setUserData - Function to set user data
+ * @param {Object} props.userData - User data object
+ * @param {string} props.userData.userName - User's name
+ * @param {string} props.userData.privateKeyPassword - User's private key password
+ * @param {string} props.userData.symmetricKey - Symmetric key for encryption
+ * @param {number} props.userData.clientNumber - Client number (1 or 2)
+ * 
+ * @returns {JSX.Element} The rendered component
+ */
 const Messages = ({ setUserData, userData }) => {
   const [message, setMessage] = useState("");
 

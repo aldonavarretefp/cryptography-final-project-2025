@@ -1,5 +1,16 @@
 import React from 'react'
 import ConversationItem from './ConversationItem';
+/**
+ * Conversation component renders a list of conversation items.
+ *
+ * @component
+ * @example
+ * return (
+ *   <Conversation />
+ * )
+ *
+ * @returns {JSX.Element} A div containing a list of ConversationItem components.
+ */
 const Conversation = () => {
 
     const data = [

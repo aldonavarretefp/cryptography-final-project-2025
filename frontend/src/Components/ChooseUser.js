@@ -1,11 +1,22 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import io from 'socket.io-client';
 
 const socket = io('http://localhost:3001');
 
+/**
+ * ChooseUser component renders a user selection interface.
+ * 
+ * @param {Object} props - The component props.
+ * @param {Function} props.setStage - Function to set the current stage.
+ * @param {Function} props.setUserData - Function to set the user data.
+ * 
+ * @returns {JSX.Element} The rendered component.
+ */
 function ChooseUser({ setStage, setUserData }) {
 
-    socket.emit('connection');
+    useEffect(() => {
+        socket.emit('connection');
+    }, []);
 
     return (
         <div className="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8 bg-gray-50">

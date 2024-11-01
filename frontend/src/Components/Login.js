@@ -4,6 +4,17 @@ import io from 'socket.io-client';
 
 const socket = io('http://localhost:3001');
 
+/**
+ * Login component handles user login and key generation.
+ *
+ * @param {Object} props - The component props.
+ * @param {Function} props.setStage - Function to set the current stage of the application.
+ * @param {Function} props.setUserData - Function to set the user data.
+ * @param {Object} props.userData - The user data object.
+ * @param {number} props.userData.userClientNumber - The client number of the user.
+ *
+ * @returns {JSX.Element} The rendered Login component.
+ */
 const Login = ({ setStage, setUserData, userData }) => {
   const [userName, setUserName] = useState('');
   const [secret, setSecret] = useState('');

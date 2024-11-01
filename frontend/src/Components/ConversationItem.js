@@ -1,5 +1,15 @@
 import React from 'react'
 
+/**
+ * ConversationItem component renders a single conversation item with avatar, name, time, and message.
+ *
+ * @param {Object} props - The properties object.
+ * @param {boolean} props.active - Indicates if the conversation item is active.
+ * @param {string} props.time - The time of the last message.
+ * @param {string} props.name - The name of the conversation participant.
+ * @param {string} props.message - The last message in the conversation.
+ * @returns {JSX.Element} The rendered conversation item component.
+ */
 const ConversationItem = ({active, time, name, message}) => {
     const _class = active ? 'bg-gray-200' : 'bg-white';
     return (

@@ -12,6 +12,16 @@ import {
 
 const socket = io("http://localhost:3001");
 
+/**
+ * WaitingRoom component handles the waiting state for both users to connect and exchange cryptographic keys.
+ *
+ * @param {Object} props - The component props.
+ * @param {Function} props.setStage - Function to set the current stage of the application.
+ * @param {Object} props.userData - User data containing client number, secret, and private key password.
+ * @param {Function} props.setUserData - Function to update the user data state.
+ *
+ * @returns {JSX.Element} The rendered component.
+ */
 function WaitingRoom({ setStage, userData, setUserData }) {
     const [bothUsersConnected, setBothUsersConnected] = useState(false);
 
