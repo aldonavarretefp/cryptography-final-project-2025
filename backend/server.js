@@ -1,35 +1,35 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const crypto = require('crypto');
-const app = express();
-const cors = require('cors');
-const server = http.createServer(app);
+const express = require('express'); // Import the Express library
+const http = require('http'); // Import the HTTP library
+const { Server } = require('socket.io'); // Import the Socket.IO library
+const app = express(); // Create an Express application
+const cors = require('cors'); // Import the CORS library
+const server = http.createServer(app); // Create an HTTP server using the Express app
 
 // Stores keys for demonstration purposes (use secure storage in production)
 let keys = {};
 
 app.use(cors({
-    origin: 'http://localhost:3000',
+    origin: 'http://localhost:3000', // Allow CORS from this origin
 }));
 
 const io = new Server(server, {
     cors: {
-        origin: 'http://localhost:3000',
-        methods: ['GET', 'POST'],
+        origin: 'http://localhost:3000', // Allow CORS from this origin
+        methods: ['GET', 'POST'], // Allow these HTTP methods
     },
 });
 
-let client1PublicKey = null;
-let client2PublicKey = null;
+let client1PublicKey = null; // Variable to store Client 1's public key
+let client2PublicKey = null; // Variable to store Client 2's public key
 
 io.on('connection', (socket) => {
-    // Aqui va el código de la aplicación en cuanto se conecta un cliente
+    // Code to execute when a client connects
 
-    console.log('a user connected');
-    console.log('keys:', keys);
+    console.log('a user connected'); // Log when a user connects
+    console.log('keys:', keys); // Log the current keys
 
     socket.on('sendMessage', async (data) => {
+        // Handle the 'sendMessage' event
         try {
             const { 
                 encryptedData, 
@@ -37,57 +37,60 @@ io.on('connection', (socket) => {
                 sender
             } = data;
 
-            console.log('Encrypted Data:', encryptedData);
-            console.log('Signature:', signature);
-            console.log('Sender:', sender);
+            console.log('Encrypted Data:', encryptedData); // Log the encrypted data
+            console.log('Signature:', signature); // Log the signature
+            console.log('Sender:', sender); // Log the sender
 
-            socket.broadcast.emit('receiveMessage', data);
+            socket.broadcast.emit('receiveMessage', data); // Broadcast the message to other clients
         } catch (err) {
-            console.error('Error decrypting message:', err);
+            console.error('Error decrypting message:', err); // Log any errors
         }
     });
 
     socket.on('disconnect', () => {
-        console.log('user disconnected');
-        client1PublicKey = null;
-        client2PublicKey = null;
+        // Handle the 'disconnect' event
+        console.log('user disconnected'); // Log when a user disconnects
+        client1PublicKey = null; // Reset Client 1's public key
+        client2PublicKey = null; // Reset Client 2's public key
     });
 
-    // Escuchar cuando el cliente 1 envía su formulario con la clave pública
+    // Listen for when Client 1 submits their public key
     socket.on('client1FormSubmitted', (data) => {
-        console.log('Client 1 submitted:', data.publicKey);
-        client1PublicKey = data.publicKey
-        checkAndExchangeKeys();
+        console.log('Client 1 submitted:', data.publicKey); // Log Client 1's public key
+        client1PublicKey = data.publicKey; // Store Client 1's public key
+        checkAndExchangeKeys(); // Check and exchange keys if both clients have submitted
     });
 
-    // Escuchar cuando el cliente 2 envía su formulario con la clave pública
+    // Listen for when Client 2 submits their public key
     socket.on('client2FormSubmitted', (data) => {
-        console.log('Client 2 submitted:', data.publicKey);
-        client2PublicKey = data.publicKey;
-        checkAndExchangeKeys();
+        console.log('Client 2 submitted:', data.publicKey); // Log Client 2's public key
+        client2PublicKey = data.publicKey; // Store Client 2's public key
+        checkAndExchangeKeys(); // Check and exchange keys if both clients have submitted
     });
 
-    // Escuchar cuando el cliente 1 envía el secreto encriptado
+    // Listen for when Client 1 sends the encrypted secret
     socket.on('sendEncryptedSecret', (data) => {        
-        console.log('Encrypted Secret: ', data.encryptedSecret);
-        const salt = data.salt;
-        const encryptedSecret = data.encryptedSecret;
-        socket.broadcast.emit('receiveEncryptedSecret', { encryptedSecret , salt });
+        console.log('Encrypted Secret: ', data.encryptedSecret); // Log the encrypted secret
+        const salt = data.salt; // Get the salt from the data
+        const encryptedSecret = data.encryptedSecret; // Get the encrypted secret from the data
+        socket.broadcast.emit('receiveEncryptedSecret', { encryptedSecret , salt }); // Broadcast the encrypted secret and salt to other clients
     });
 
-    // Función para intercambiar las claves entre ambos clientes
+    // Function to exchange keys between both clients
     const checkAndExchangeKeys = () => {
         if (client1PublicKey && client2PublicKey) {
-            // Enviar la clave pública del cliente 1 al cliente 2
+            // If both clients have submitted their public keys
+
+            // Send Client 1's public key to Client 2
             io.emit('sendToClient2', { publicKey: client1PublicKey });
 
-            // Enviar la clave pública del cliente 2 al cliente 1
+            // Send Client 2's public key to Client 1
             io.emit('sendToClient1', { publicKey: client2PublicKey });
 
-            // Enviar el secreto encriptado al cliente 2
+            // Notify both clients that they are connected
             io.emit('bothUsersConnected', true); 
 
-            // Reiniciar las variables si es necesario para manejar futuras conexiones
+            // Reset the public key variables for future connections
             client1PublicKey = null;
             client2PublicKey = null;
         }
@@ -96,5 +99,6 @@ io.on('connection', (socket) => {
 });
 
 server.listen(3001, () => {
-    console.log('listening on *:3001');
+    // Start the server and listen on port 3001
+    console.log('listening on *:3001'); // Log that the server is listening
 });
