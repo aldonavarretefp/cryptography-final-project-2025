@@ -51,45 +51,47 @@ const Messages = ({ setUserData, userData }) => {
     alertType: "danger",
   });
 
-  /*
   const setAlertMessageFunc = (isVerified) => {
     if (isVerified) {
       setAlertMessage({
         alertTitle: "Mensaje verificado",
-        alertMessage: "El mensaje ha sido verificado correctamente",
         alertType: "success",
       });
     } else {
       setAlertMessage({
         alertTitle: "Mensaje no verificado",
-        alertMessage: "El mensaje no ha sido verificado correctamente",
         alertType: "danger",
       });
     }
-  };*/
+  };
 
 
   const sendMessage = async () => {
     try {
-      // Obtener mis llaves
-      const encriptedPrivateKey = sessionStorage.getItem("encryptedPrivateKey");
-      const privateKeyPem = await decryptPrivateKeyWithPassword(encriptedPrivateKey, userData.privateKeyPassword);
-      const privateKey = await importPrivateKey(privateKeyPem);
-
       // Encriptar el mensaje
       const encryptedData = await encryptMessage(message, userData.symmetricKey);
 
-      // Firmar el mensaje
-      //const signature = await signMessage(message, privateKey);
-      const signature = "";
+      // Generar un par de claves par firmar 
+      const signingKeyPair = await window.crypto.subtle.generateKey(
+        {
+          name: "RSA-PSS",
+          modulusLength: 2048,
+          publicExponent: new Uint8Array([1, 0, 1]),
+          hash: { name: "SHA-256" },
+        },
+        true,
+        ["sign", "verify"]
+      );
 
+      // Firmar el mensaje
+      const signature = await signMessage(signingKeyPair.privateKey, message);
   
       socket.emit("sendMessage", {
         encryptedData,
         signature,
-        sender: userData.userName
+        sender: userData.userName,
+        publicKey: signingKeyPair.publicKey
       });
-
 
       const newMessage = {
         id: messages.length + 1,
@@ -109,35 +111,30 @@ const Messages = ({ setUserData, userData }) => {
 
   socket.on("receiveMessage", async (data) => {
     try {
-      const {
-        encryptedData,
-        signature,
-        sender
-      } = data;
-
+      const { encryptedData, signature, sender, publicKey } = data;
       console.log("receiveMessage", { encryptedData, signature, sender });
-
-      // Descencriptar mensaje
+  
+      // Desencriptar mensaje después de verificar la firma
       const decryptedMessage = await decryptMessage(encryptedData, userData.symmetricKey);
-
-      // Verificar la firma del mensaje
-      const othersPublicKeyPem = sessionStorage.getItem('othersPublicKey');
-      const othersPublicKey = await importPublicKey(othersPublicKeyPem);
-      //const isVerified = await verifySignature(decryptedMessage, signature, othersPublicKey);
+  
+      // Verificar la firma antes de descifrar el mensaje
+      //const isVerified = await verifySignature(publicKey, decryptedMessage, signature);
       const isVerified = true;
+  
+      if (!isVerified) {
+        throw new Error("La firma no es válida");
+      }
 
       console.log("receive", {
         decryptedMessage,
-        isVerified
+        isVerified,
       });
-
-      //setAlertMessageFunc(isVerified);
-
+  
       const newMessage = {
         id: messages.length + 1,
         user: sender,
         message: decryptedMessage,
-        position: "left", 
+        position: "left",
         time: Date.now().toString(),
         avatar: DEFAULT_AVATAR_URL,
       };

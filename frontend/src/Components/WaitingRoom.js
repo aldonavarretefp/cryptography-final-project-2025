@@ -42,6 +42,7 @@ function WaitingRoom({ setStage, userData, setUserData }) {
                 const secret = userData.secret;
                 console.log("Secret:", secret);
                 const salt = crypto.getRandomValues(new Uint8Array(16));
+                console.log("salt: ", salt);
 
                 const user2PublicKeyPem = data.publicKey;
                 console.log("user2PublicKeyPem: ", user2PublicKeyPem);
@@ -58,6 +59,7 @@ function WaitingRoom({ setStage, userData, setUserData }) {
                     ...prevData,
                     symmetricKey,
                 }));
+                console.log("Symmetric Key:", symmetricKey);
             }
         });
 
@@ -72,14 +74,18 @@ function WaitingRoom({ setStage, userData, setUserData }) {
         socket.on("receiveEncryptedSecret", async (data) => {
             if (userData.clientNumber === 2) {            
                 try {
+                    const {
+                        encryptedSecret,
+                        salt
+                    } = data;
+
                     //Desencriptar el secreto
                     const encriptedPrivateKey = sessionStorage.getItem("encryptedPrivateKey");
 
                     const privateKeyPem = await decryptPrivateKeyWithPassword(encriptedPrivateKey, userData.privateKeyPassword);
                     console.log("privateKeyPem: ", privateKeyPem);
                                         
-
-                    const encryptedSecret = data.encryptedSecret;
+                    console.log("salt: ", salt);
                     console.log("Encrypted Secret:", encryptedSecret);
 
                     const privateKey = await importPrivateKey(privateKeyPem);
@@ -88,11 +94,10 @@ function WaitingRoom({ setStage, userData, setUserData }) {
                     const secret = await decryptSecretWithPrivateKey(encryptedSecret, privateKey);
                     console.log("Decrypted Secret:", new TextDecoder().decode(secret));
 
-                    //Generar y guardar llave simétrica
-                    const salt = data.salt;
+                    //Generar y guardar llave simétrica                    
                     const symmetricKey = await generateSymmetricKey(new TextDecoder().decode(secret), salt);
                     setUserData((prevData) => ({...prevData, symmetricKey,}));
-
+                    console.log("Symmetric Key:", symmetricKey);
                 } catch (error) {
                     console.error("Error:", error);
                 }

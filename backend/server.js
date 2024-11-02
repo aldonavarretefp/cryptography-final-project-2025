@@ -28,18 +28,20 @@ io.on('connection', (socket) => {
     console.log('a user connected'); // Log when a user connects
     console.log('keys:', keys); // Log the current keys
 
-    socket.on('sendMessage', async (data) => {
+    socket.on('sendMessage', (data) => {
         // Handle the 'sendMessage' event
         try {
             const { 
                 encryptedData, 
                 signature,
-                sender
+                sender,
+                publicKey
             } = data;
 
             console.log('Encrypted Data:', encryptedData); // Log the encrypted data
             console.log('Signature:', signature); // Log the signature
             console.log('Sender:', sender); // Log the sender
+            console.log('Public Key:', publicKey); // Log the public key
 
             socket.broadcast.emit('receiveMessage', data); // Broadcast the message to other clients
         } catch (err) {
@@ -71,8 +73,8 @@ io.on('connection', (socket) => {
     // Listen for when Client 1 sends the encrypted secret
     socket.on('sendEncryptedSecret', (data) => {        
         console.log('Encrypted Secret: ', data.encryptedSecret); // Log the encrypted secret
-        const salt = data.salt; // Get the salt from the data
         const encryptedSecret = data.encryptedSecret; // Get the encrypted secret from the data
+        const salt = data.salt; // Get the salt from the data        
         socket.broadcast.emit('receiveEncryptedSecret', { encryptedSecret , salt }); // Broadcast the encrypted secret and salt to other clients
     });
 
