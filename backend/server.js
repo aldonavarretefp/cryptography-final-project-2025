@@ -41,7 +41,7 @@ io.on('connection', (socket) => {
             console.log('Encrypted Data:', encryptedData); // Log the encrypted data
             console.log('Signature:', signature); // Log the signature
             console.log('Sender:', sender); // Log the sender
-            console.log('Public Key:', publicKey); // Log the public key
+            console.log('------Public Key:------', publicKey); // Log the public key
 
             socket.broadcast.emit('receiveMessage', data); // Broadcast the message to other clients
         } catch (err) {

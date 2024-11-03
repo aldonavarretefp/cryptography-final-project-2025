@@ -7,24 +7,7 @@ const socket = io("http://localhost:3001");
 
 const DEFAULT_AVATAR_URL = "https://cdn.pixabay.com/photo/2017/01/31/21/23/avatar-2027366_960_720.png";
 
-const messagesData = [
-  {
-    id: 1,
-    user: "Rey Jhon A. Baquirin",
-    avatar: DEFAULT_AVATAR_URL,
-    message: "(Mensaje de prueba) Hola, ¿cómo estás?",
-    time: "1 day ago",
-    position: "left",
-  },
-  {
-    id: 2,
-    user: "Rey Jhon A. Baquirin",
-    avatar: DEFAULT_AVATAR_URL,
-    message: "(Mensaje de prueba) Hola, ¿cómo estás?",
-    time: "1 day ago",
-    position: "right",
-  }
-];
+const messagesData = [];
 
 /**
  * Messages component handles the sending and receiving of encrypted messages.
@@ -65,7 +48,6 @@ const Messages = ({ setUserData, userData }) => {
     }
   };
 
-
   const sendMessage = async () => {
     try {
       // Encriptar el mensaje
@@ -85,12 +67,19 @@ const Messages = ({ setUserData, userData }) => {
 
       // Firmar el mensaje
       const signature = await signMessage(signingKeyPair.privateKey, message);
+      const publicKey = await window.crypto.subtle.exportKey(
+        "spki", // formato de exportación
+        signingKeyPair.publicKey
+      );
+      const publicKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(publicKey)));
+
+
   
       socket.emit("sendMessage", {
         encryptedData,
         signature,
         sender: userData.userName,
-        publicKey: signingKeyPair.publicKey
+        publicKey: publicKeyBase64
       });
 
       const newMessage = {
@@ -111,20 +100,41 @@ const Messages = ({ setUserData, userData }) => {
 
   socket.on("receiveMessage", async (data) => {
     try {
-      const { encryptedData, signature, sender, publicKey } = data;
+      const { 
+        encryptedData, 
+        signature, 
+        sender, 
+        publicKey // recibida en formato base64
+      } = data;
+  
+      console.log("Public Key (base64):", publicKey);
       console.log("receiveMessage", { encryptedData, signature, sender });
   
-      // Desencriptar mensaje después de verificar la firma
-      const decryptedMessage = await decryptMessage(encryptedData, userData.symmetricKey);
+      // Convertir la clave pública de base64 a ArrayBuffer
+      const publicKeyBuffer = Uint8Array.from(atob(publicKey), c => c.charCodeAt(0)).buffer;
+  
+      // Importar la clave pública
+      const importedPublicKey = await crypto.subtle.importKey(
+        "spki",
+        publicKeyBuffer,
+        {
+          name: "RSA-PSS",
+          hash: { name: "SHA-256" },
+        },
+        true,
+        ["verify"]
+      );
   
       // Verificar la firma antes de descifrar el mensaje
-      //const isVerified = await verifySignature(publicKey, decryptedMessage, signature);
-      const isVerified = true;
+      const decryptedMessage = await decryptMessage(encryptedData, userData.symmetricKey);
+      const isVerified = await verifySignature(importedPublicKey, decryptedMessage, signature);
   
       if (!isVerified) {
         throw new Error("La firma no es válida");
       }
-
+  
+      setAlertMessageFunc(isVerified);
+      
       console.log("receive", {
         decryptedMessage,
         isVerified,
